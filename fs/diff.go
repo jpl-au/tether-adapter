@@ -40,15 +40,23 @@ func NewDiffStore(dir string) *DiffStore {
 	return &DiffStore{dir: dir}
 }
 
-// Save writes differ snapshot data to a file.
+// Save writes differ snapshot data to a file. The write goes to a
+// temp file and is renamed into place so a crash mid-write cannot
+// leave a truncated file behind.
 func (s *DiffStore) Save(_ context.Context, id string, data []byte) error {
+	if err := safeName(id); err != nil {
+		return err
+	}
 	dev.Debug("fs.DiffStore: save", "id", short(id), "bytes", len(data))
-	return os.WriteFile(s.path(id), data, 0o600)
+	return writeAtomic(s.path(id), data)
 }
 
 // Load reads differ snapshot data from a file. Returns (nil, nil)
 // if the file does not exist.
 func (s *DiffStore) Load(_ context.Context, id string) ([]byte, error) {
+	if err := safeName(id); err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(s.path(id))
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -59,6 +67,9 @@ func (s *DiffStore) Load(_ context.Context, id string) ([]byte, error) {
 // Delete removes a differ snapshot file. Returns nil if the file
 // does not exist.
 func (s *DiffStore) Delete(_ context.Context, id string) error {
+	if err := safeName(id); err != nil {
+		return err
+	}
 	dev.Debug("fs.DiffStore: delete", "id", short(id))
 	err := os.Remove(s.path(id))
 	if os.IsNotExist(err) {

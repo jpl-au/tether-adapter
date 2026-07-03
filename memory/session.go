@@ -35,12 +35,19 @@ func (s *SessionStore) Save(_ context.Context, id string, data []byte, _ time.Du
 }
 
 // Load retrieves session data. Returns (nil, nil) if the ID is not
-// found - the framework treats this as "no session to restore".
+// found - the framework treats this as "no session to restore". The
+// returned slice is a copy, matching Save's semantics, so the caller
+// cannot alias the store's internal buffer.
 func (s *SessionStore) Load(_ context.Context, id string) ([]byte, error) {
 	s.mu.Lock()
 	data := s.data[id]
 	s.mu.Unlock()
-	return data, nil
+	if data == nil {
+		return nil, nil
+	}
+	cp := make([]byte, len(data))
+	copy(cp, data)
+	return cp, nil
 }
 
 // Delete removes session data. Returns nil if the ID is not found.

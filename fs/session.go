@@ -48,17 +48,25 @@ func NewSessionStore(dir string) *SessionStore {
 	return &SessionStore{dir: dir}
 }
 
-// Save writes session data to a file. The TTL is logged for
-// observability but not enforced by the filesystem store.
+// Save writes session data to a file. The write goes to a temp file
+// and is renamed into place so a crash mid-write cannot leave a
+// truncated file behind. The TTL is logged for observability but not
+// enforced by the filesystem store.
 func (s *SessionStore) Save(_ context.Context, id string, data []byte, ttl time.Duration) error {
+	if err := safeName(id); err != nil {
+		return err
+	}
 	dev.Debug("fs.SessionStore: save", "id", short(id), "bytes", len(data), "ttl", ttl)
-	return os.WriteFile(s.path(id), data, 0o600)
+	return writeAtomic(s.path(id), data)
 }
 
 // Load reads session data from a file. Returns (nil, nil) if the
 // file does not exist - the framework treats this as "no session to
 // restore".
 func (s *SessionStore) Load(_ context.Context, id string) ([]byte, error) {
+	if err := safeName(id); err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(s.path(id))
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -72,6 +80,9 @@ func (s *SessionStore) Load(_ context.Context, id string) ([]byte, error) {
 // Delete removes a session file. Returns nil if the file does not
 // exist.
 func (s *SessionStore) Delete(_ context.Context, id string) error {
+	if err := safeName(id); err != nil {
+		return err
+	}
 	dev.Debug("fs.SessionStore: delete", "id", short(id))
 	err := os.Remove(s.path(id))
 	if os.IsNotExist(err) {
