@@ -9,7 +9,7 @@
 //
 // Usage:
 //
-//	import "github.com/jpl-au/tether-store/fs"
+//	import "github.com/jpl-au/tether-adapter/fs"
 //
 //	tether.Stateful(app, tether.StatefulConfig[State]{
 //	    SessionStore: fs.NewSessionStore("tmp/sessions"),

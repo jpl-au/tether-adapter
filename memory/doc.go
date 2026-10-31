@@ -8,7 +8,7 @@
 //
 // Usage:
 //
-//	import "github.com/jpl-au/tether-store/memory"
+//	import "github.com/jpl-au/tether-adapter/memory"
 //
 //	tether.Stateful(app, tether.StatefulConfig[State]{
 //	    SessionStore: memory.NewSessionStore(),
